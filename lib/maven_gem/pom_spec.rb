@@ -97,9 +97,7 @@ module MavenGem
     end
 
     def self.create_gem(spec, pom, options = {})
-        gem_dir = create_files(spec, pom, options)
-      ensure
-        FileUtils.rm_r(gem_dir) if gem_dir
+      gem = create_files(spec, pom, options)
     end
 
     def self.to_maven_url(group, artifact, version)
@@ -119,8 +117,8 @@ module MavenGem
       jar_file_contents(gem_dir, pom, options)
       metadata_contents(gem_dir, specification, pom, options)
       gem_contents(gem_dir, pom, options)
-
-      gem_dir
+    ensure
+      FileUtils.rm_r(gem_dir) if gem_dir
     end
 
     def self.create_tmp_directories(pom, options = {})
@@ -179,6 +177,8 @@ HEREDOC
           system('tar czf data.tar.gz lib/*') and
           system("tar cf ../#{pom.gem_file} data.tar.gz metadata.gz")
       end
+
+      File.expand_path("../#{pom.gem_file}", gem_dir) # return the gem file
     end
 
     def self.maven_base_url
