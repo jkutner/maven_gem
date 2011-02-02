@@ -47,6 +47,7 @@ module MavenGem
     # 
     # TODO: Parse maven version number modifiers, i.e: [1.5,) [1.5,1.6], (,1.5]
     def self.maven_to_gem_version(maven_version)
+      maven_version = parse_property(maven_version)
       maven_version = maven_version.gsub(/alpha/, '0')
       maven_version = maven_version.gsub(/beta/, '1')
       maven_numbers = maven_version.gsub(/\D+/, '.').split('.').find_all { |i| i.length > 0 }
@@ -55,6 +56,19 @@ module MavenGem
       else
         maven_numbers.join('.')
       end
+    end
+
+    def self.is_property?(s)
+      !(s.match(/\A\$\{/).nil?)
+    end
+
+    def self.parse_property(property)
+      if is_property?(property)
+        property_name = property.gsub(/\A\$\{/, '').gsub(/\}\z/, '')
+        property = @properties[property_name]
+        raise "No value found for property: ${#{property_name}}" if property.nil?
+      end
+      property
     end
 
     def self.parse_pom(pom_doc, options = {})
@@ -67,9 +81,15 @@ module MavenGem
       pom.artifact = xpath_text(document, '/project/artifactId')
       pom.maven_version = xpath_text(document, '/project/version') || xpath_text(document, '/project/parent/version')
       pom.version = maven_to_gem_version(pom.maven_version)
+
+      @properties = xpath_properties(document)
+      @properties['project.groupId'] = pom.group
+      @properties['project.artifactId'] = pom.artifact
+      @properties['project.version'] = pom.maven_version
+
       pom.description = xpath_text(document, '/project/description')
       pom.url = xpath_text(document, '/project/url')
-      pom.dependencies = xpath_dependencies(document)
+      pom.dependencies = xpath_dependencies(document, pom.properties)
       pom.authors = xpath_authors(document)
 
       pom.name = maven_to_gem_name(pom.group, pom.artifact)
@@ -107,7 +127,7 @@ module MavenGem
     private
 
     def self.maven_to_gem_name(group, artifact, options = {})
-      "#{group}.#{artifact}"
+      "#{parse_property(group)}.#{parse_property(artifact)}"
     end
 
     def self.create_files(specification, pom, options = {})

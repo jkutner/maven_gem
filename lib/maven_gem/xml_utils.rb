@@ -7,7 +7,7 @@ module MavenGem
       first = REXML::XPath.first(element, node) and first.text
     end
 
-    def xpath_dependencies(element)
+    def xpath_dependencies(element, properties)
       deps = REXML::XPath.first(element, '/project/dependencies')
       pom_dependencies = []
 
@@ -44,6 +44,19 @@ module MavenGem
 
     def xpath_group(element)
       xpath_text(element, '/project/groupId') || xpath_text(element, '/project/parent/groupId')
+    end
+
+    def xpath_properties(element)
+      props = REXML::XPath.first(element, '/project/properties')
+      pom_properties = {}
+
+      if props
+        props.elements.each do |prop|
+          pom_properties[prop.name] = prop.text
+        end
+      end
+
+      pom_properties
     end
   end
 end
