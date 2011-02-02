@@ -5,9 +5,9 @@ describe MavenGem do
     it "creates a gem with group, artifact and version" do
       begin
       lambda { 
-        MavenGem.build('ant', 'ant', '1.6.5')
+        g = MavenGem.build('ant', 'ant', '1.6.5')
+        File.exist?(g).should be_true
       }.should_not raise_error
-      File.exist?('ant.ant-1.6.5-java.gem').should be_true
       ensure
         require 'fileutils'
         FileUtils.rm_f('ant.ant-1.6.5-java.gem')
