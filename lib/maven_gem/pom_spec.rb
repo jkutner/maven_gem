@@ -89,7 +89,7 @@ module MavenGem
 
       pom.description = xpath_text(document, '/project/description')
       pom.url = xpath_text(document, '/project/url')
-      pom.dependencies = xpath_dependencies(document, pom.properties)
+      pom.dependencies = xpath_dependencies(document)
       pom.authors = xpath_authors(document)
 
       pom.name = maven_to_gem_name(pom.group, pom.artifact)

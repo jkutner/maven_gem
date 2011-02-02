@@ -7,7 +7,7 @@ module MavenGem
       first = REXML::XPath.first(element, node) and first.text
     end
 
-    def xpath_dependencies(element, properties)
+    def xpath_dependencies(element)
       deps = REXML::XPath.first(element, '/project/dependencies')
       pom_dependencies = []
 
