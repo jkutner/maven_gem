@@ -1,11 +1,13 @@
 require 'ostruct'
 require 'fileutils'
+require 'yaml'
 
 module MavenGem
   class PomSpec
     extend MavenGem::XmlUtils
 
-    def self.build(location)
+    def self.build(location, properties={})
+      @properties = properties
       pom_doc = MavenGem::PomFetcher.fetch(location)
       pom = MavenGem::PomSpec.parse_pom(pom_doc)
       spec = MavenGem::PomSpec.generate_spec(pom)
@@ -79,10 +81,10 @@ module MavenGem
 
       pom.group = xpath_group(document)
       pom.artifact = xpath_text(document, '/project/artifactId')
-      pom.maven_version = xpath_text(document, '/project/version') || xpath_text(document, '/project/parent/version')
+      pom.maven_version = parse_property(xpath_text(document, '/project/version') || xpath_text(document, '/project/parent/version'))
       pom.version = maven_to_gem_version(pom.maven_version)
 
-      @properties = xpath_properties(document)
+      @properties.merge! xpath_properties(document)
       @properties['project.groupId'] = pom.group
       @properties['project.artifactId'] = pom.artifact
       @properties['project.version'] = pom.maven_version
@@ -202,6 +204,7 @@ HEREDOC
     end
 
     def self.maven_base_url
+      # says who????
       "http://mirrors.ibiblio.org/pub/mirrors/maven2"
     end
   end

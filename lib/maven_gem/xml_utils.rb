@@ -18,13 +18,16 @@ module MavenGem
           dep_group = xpath_text(dep, 'groupId')
           dep_artifact = xpath_text(dep, 'artifactId')
           dep_version = xpath_text(dep, 'version')
+          dep_scope = xpath_text(dep, 'scope')
 
-          # TODO: Parse maven version number modifiers, i.e: [1.5,)
-          pom_dependencies << if dep_version
-            Gem::Dependency.new(maven_to_gem_name(dep_group, dep_artifact),
-              "=#{maven_to_gem_version(dep_version)}")
-          else
-            Gem::Dependency.new(maven_to_gem_name(dep_group, dep_artifact))
+          if !['test', 'provided'].include?(dep_scope)
+            # TODO: Parse maven version number modifiers, i.e: [1.5,)
+            pom_dependencies << if dep_version
+              Gem::Dependency.new(maven_to_gem_name(dep_group, dep_artifact),
+                "=#{maven_to_gem_version(dep_version)}")
+            else
+              Gem::Dependency.new(maven_to_gem_name(dep_group, dep_artifact))
+            end
           end
         end
       end
