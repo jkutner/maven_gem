@@ -6,8 +6,11 @@ module MavenGem
   class PomSpec
     extend MavenGem::XmlUtils
 
-    def self.build(location, properties={})
-      @properties = properties
+    @@maven_base_url = "http://mirrors.ibiblio.org/pub/mirrors/maven2"
+
+    def self.build(location, properties={}, maven_base_url=@@maven_base_url)
+      @@maven_base_url = maven_base_url
+      @@properties = properties
       pom_doc = MavenGem::PomFetcher.fetch(location)
       pom = MavenGem::PomSpec.parse_pom(pom_doc)
       spec = MavenGem::PomSpec.generate_spec(pom)
@@ -67,7 +70,7 @@ module MavenGem
     def self.parse_property(property)
       if is_property?(property)
         property_name = property.gsub(/\A\$\{/, '').gsub(/\}\z/, '')
-        property = @properties[property_name]
+        property = @@properties[property_name]
         raise "No value found for property: ${#{property_name}}" if property.nil?
       end
       property
@@ -84,10 +87,10 @@ module MavenGem
       pom.maven_version = parse_property(xpath_text(document, '/project/version') || xpath_text(document, '/project/parent/version'))
       pom.version = maven_to_gem_version(pom.maven_version)
 
-      @properties.merge! xpath_properties(document)
-      @properties['project.groupId'] = pom.group
-      @properties['project.artifactId'] = pom.artifact
-      @properties['project.version'] = pom.maven_version
+      @@properties.merge! xpath_properties(document)
+      @@properties['project.groupId'] = pom.group
+      @@properties['project.artifactId'] = pom.artifact
+      @@properties['project.version'] = pom.maven_version
 
       pom.description = xpath_text(document, '/project/description')
       pom.url = xpath_text(document, '/project/url')
@@ -99,7 +102,7 @@ module MavenGem
       pom.gem_name = "#{pom.name}-#{pom.version}"
       pom.jar_file = "#{pom.artifact}-#{pom.maven_version}.jar"
       pom.remote_dir = "#{pom.group.gsub('.', '/')}/#{pom.artifact}/#{pom.version}"
-      pom.remote_jar_url = "#{maven_base_url}/#{pom.remote_dir}/#{pom.jar_file}"
+      pom.remote_jar_url = "#{@@maven_base_url}/#{pom.remote_dir}/#{pom.jar_file}"
       pom.gem_file = "#{pom.gem_name}-java.gem"
       pom
     end
@@ -122,7 +125,7 @@ module MavenGem
       gem = create_files(spec, pom, options)
     end
 
-    def self.to_maven_url(group, artifact, version)
+    def self.to_maven_url(group, artifact, version, maven_base_url=@@maven_base_url)
       "#{maven_base_url}/#{group.gsub('.', '/')}/#{artifact}/#{version}/#{artifact}-#{version}.pom"
     end
 
@@ -201,11 +204,6 @@ HEREDOC
       end
 
       File.expand_path("../#{pom.gem_file}", gem_dir) # return the gem file
-    end
-
-    def self.maven_base_url
-      # says who????
-      "http://mirrors.ibiblio.org/pub/mirrors/maven2"
     end
   end
 end
