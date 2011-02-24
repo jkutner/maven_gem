@@ -6,13 +6,11 @@ module MavenGem
   class PomSpec
     extend MavenGem::XmlUtils
 
-    @@maven_base_url = "http://mirrors.ibiblio.org/pub/mirrors/maven2"
+    @@properties = {}
 
-    def self.build(location, properties={}, maven_base_url=@@maven_base_url)
-      @@maven_base_url = maven_base_url
-      @@properties = properties
+    def self.build(location, maven_base_url)
       pom_doc = MavenGem::PomFetcher.fetch(location)
-      pom = MavenGem::PomSpec.parse_pom(pom_doc)
+      pom = MavenGem::PomSpec.parse_pom(pom_doc, maven_base_url)
       spec = MavenGem::PomSpec.generate_spec(pom)
       MavenGem::PomSpec.create_gem(spec, pom)
     end
@@ -76,11 +74,11 @@ module MavenGem
       property
     end
 
-    def self.parse_pom(pom_doc, options = {})
+    def self.parse_pom(pom_doc, maven_base_url, options = {})
       puts "Processing POM" if options[:verbose]
 
       pom = OpenStruct.new
-      document = REXML::Document.new(pom_doc)
+      document = REXML::Document.new(pom_doc, maven_base_url)
 
       pom.group = xpath_group(document)
       pom.artifact = xpath_text(document, '/project/artifactId')
@@ -101,8 +99,8 @@ module MavenGem
       pom.lib_name = "#{pom.artifact}.rb"
       pom.gem_name = "#{pom.name}-#{pom.version}"
       pom.jar_file = "#{pom.artifact}-#{pom.maven_version}.jar"
-      pom.remote_dir = "#{pom.group.gsub('.', '/')}/#{pom.artifact}/#{pom.version}"
-      pom.remote_jar_url = "#{@@maven_base_url}/#{pom.remote_dir}/#{pom.jar_file}"
+      pom.remote_dir = to_maven_path(pom.group, pom.artifact, pom.version)
+      pom.remote_jar_url = "#{maven_base_url}/#{pom.remote_dir}/#{pom.jar_file}"
       pom.gem_file = "#{pom.gem_name}-java.gem"
       pom
     end
@@ -125,11 +123,19 @@ module MavenGem
       gem = create_files(spec, pom, options)
     end
 
-    def self.to_maven_url(group, artifact, version, maven_base_url=@@maven_base_url)
-      "#{maven_base_url}/#{group.gsub('.', '/')}/#{artifact}/#{version}/#{artifact}-#{version}.pom"
+    def self.to_maven_url(group, artifact, version, maven_base_url)
+      "#{maven_base_url}/#{self.to_maven_pom(group, artifact, version)}"
     end
 
     private
+
+    def self.to_maven_path(group, artifact, version)
+      "#{group.gsub('.', '/')}/#{artifact}/#{version}"
+    end
+
+    def self.to_maven_pom(group, artifact, version)
+      "#{to_maven_path(group, artifact, version)}/#{artifact}-#{version}.pom"
+    end
 
     def self.maven_to_gem_name(group, artifact, options = {})
       "#{parse_property(group)}.#{parse_property(artifact)}"

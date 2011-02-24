@@ -34,13 +34,13 @@ describe MavenGem::PomSpec do
     it "keeps the original version as maven_version" do
       ant_pom.maven_version.should == '1.6.5'
       with_non_numeric_version = @pom.gsub(/<version>1.6.5<\/version>/, '<version>1.6.6-SNAPSHOT</version>')
-      MavenGem::PomSpec.parse_pom(with_non_numeric_version).maven_version.should == '1.6.6-SNAPSHOT'
+      MavenGem::PomSpec.parse_pom(with_non_numeric_version, "http://foobar.com").maven_version.should == '1.6.6-SNAPSHOT'
     end
 
     it "keeps the version number as version" do
       ant_pom.version.should == '1.6.5'
       with_non_numeric_version = @pom.gsub(/<version>1.6.5<\/version>/, '<version>1.6.6-SNAPSHOT</version>')
-      MavenGem::PomSpec.parse_pom(with_non_numeric_version).version.should == '1.6.6'
+      MavenGem::PomSpec.parse_pom(with_non_numeric_version, "http://foobar.com").version.should == '1.6.6'
     end
 
     it "keeps the pom description as description" do
@@ -72,7 +72,7 @@ describe MavenGem::PomSpec do
     it "adds dependencies without version" do
       @pom.gsub(/<optional>true<\/optional>/, '')
       @pom.gsub(/<(version)>.+<\/$1>/, '')
-      pom_spec = MavenGem::PomSpec.parse_pom(@pom)
+      pom_spec = MavenGem::PomSpec.parse_pom(@pom, "http://foobar.com")
 
       pom_spec.dependencies.each {|d| d.requirement.as_list.should be_empty}
     end
@@ -107,7 +107,7 @@ describe MavenGem::PomSpec do
       pom.gem_file.should == 'ant.ant-1.6.5-java.gem'
 
       with_non_numeric_version = @pom.gsub(/<version>1.6.5<\/version>/, '<version>1.6.6-SNAPSHOT</version>')
-      pom = MavenGem::PomSpec.parse_pom(with_non_numeric_version)
+      pom = MavenGem::PomSpec.parse_pom(with_non_numeric_version, "http://foobar.com")
       pom.jar_file.should == 'ant-1.6.6-SNAPSHOT.jar'
       pom.gem_file.should == 'ant.ant-1.6.6-java.gem'
     end
@@ -116,7 +116,7 @@ describe MavenGem::PomSpec do
       pom = MavenGem::PomFetcher.fetch(File.join(FIXTURES, 'hudson-rake.pom'))
       pom_without_version = pom.gsub(/<version>1.7-SNAPSHOT<\/version>/, '')
 
-      pom_spec = MavenGem::PomSpec.parse_pom(pom_without_version)
+      pom_spec = MavenGem::PomSpec.parse_pom(pom_without_version, "http://foobar.com")
       pom_spec.version.should == '1.319'
     end
   end
@@ -143,6 +143,7 @@ describe MavenGem::PomSpec do
 
   describe "create_gem" do
     it "creates the gem file" do
+      pending # still need to figure out how to get a handle to 
       begin
         pom = ant_pom
         spec = MavenGem::PomSpec.generate_spec(pom)
@@ -177,23 +178,29 @@ describe MavenGem::PomSpec do
 
   describe "to_maven_url" do
     it "creates an artifact jar url from group, artifact and version" do
-      MavenGem::PomSpec.to_maven_url('ant', 'ant', '1.6.5').should ==
+      MavenGem::PomSpec.to_maven_url('ant', 'ant', '1.6.5', "http://mirrors.ibiblio.org/pub/mirrors/maven2").should ==
         "http://mirrors.ibiblio.org/pub/mirrors/maven2/ant/ant/1.6.5/ant-1.6.5.pom"
+    end
+
+    it "creates an artifact jar url from group, artifact, version and repo" do
+      MavenGem::PomSpec.to_maven_url('ant', 'ant', '1.6.5', 'http://foobar.com').should ==
+        "http://foobar.com/ant/ant/1.6.5/ant-1.6.5.pom"
     end
   end
 
   def pom_with_dependencies
     with_deps = @pom.gsub(/<optional>true<\/optional>/, '')
-    MavenGem::PomSpec.parse_pom(with_deps)
+    MavenGem::PomSpec.parse_pom(with_deps, "http://foobar.com")
   end
 
   def hudson_rake_pom
+    pom_url = File.join(FIXTURES, 'hudson-rake.pom')
     pom = MavenGem::PomFetcher.fetch(File.join(FIXTURES, 'hudson-rake.pom'))
-    MavenGem::PomSpec.parse_pom(pom)
+    MavenGem::PomSpec.parse_pom(pom, pom_url)
   end
 
   def ant_pom
-    MavenGem::PomSpec.parse_pom(@pom)
+    MavenGem::PomSpec.parse_pom(@pom, "http://mirrors.ibiblio.org/pub/mirrors/maven2")
   end
 
   def within_tmp_directory

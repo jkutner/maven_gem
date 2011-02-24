@@ -7,25 +7,23 @@ require 'rubygems'
 require 'rubygems/gem_runner'
 
 module MavenGem
-  # :properties won't be needed once we can get to the parent pom.xml
-  def self.install(group, artifact = nil, version = nil, properties={}, repository={})
-    gem = build(group, artifact, version, properties, repository)
+
+  @@default_maven_base_url = "http://mirrors.ibiblio.org/pub/mirrors/maven2"
+
+  def self.install(group, artifact = nil, version = nil, repository=nil)
+    gem = build(group, artifact, version, repository)
     Gem::GemRunner.new.run(["install", gem])
   ensure
     FileUtils.rm_f(gem) if gem
   end
 
-  def self.build(group, artifact = nil, version = nil, properties={}, repository={})
+  def self.build(group, artifact = nil, version = nil, repository=nil)
+    repository = repository ? repository : @@default_maven_base_url
     gem = if artifact
-      url = repository[:url] ?
-          MavenGem::PomSpec.to_maven_url(group, artifact, version, repository[:url]) :
-          MavenGem::PomSpec.to_maven_url(group, artifact, version)
-      puts url
-      MavenGem::PomSpec.build(url, properties, repository[:url])
+      url = MavenGem::PomSpec.to_maven_url(group, artifact, version, repository)
+      MavenGem::PomSpec.build(url, repository)
     else
-      repository[:url] ?
-          MavenGem::PomSpec.build(group, properties, repository[:url]) :
-          MavenGem::PomSpec.build(group, properties)
+      MavenGem::PomSpec.build(group, repository)
     end
   end
 end
