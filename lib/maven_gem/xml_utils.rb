@@ -49,6 +49,21 @@ module MavenGem
       xpath_text(element, '/project/groupId') || xpath_text(element, '/project/parent/groupId')
     end
 
+    def xpath_parent_group(element)
+      parent = REXML::XPath.first(element, 'parent')
+      parent ? xpath_group(parent) : nil
+    end
+
+    def xpath_parent_artifact(element)
+      parent = REXML::XPath.first(element, 'parent')
+      parent ? xpath_text(element, 'parent/artifactId') : nil
+    end
+
+    def xpath_parent_version(element)
+      parent = REXML::XPath.first(element, 'parent')
+      parent ? xpath_text(element, 'parent/version') : nil
+    end
+
     def xpath_properties(element)
       props = REXML::XPath.first(element, '/project/properties')
       pom_properties = {}

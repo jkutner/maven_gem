@@ -8,7 +8,8 @@ module MavenGem
 
     @@properties = {}
 
-    def self.build(location, maven_base_url)
+    def self.build(location, maven_base_url, properties={})
+      @@properties.merge!(properties)
       pom_doc = MavenGem::PomFetcher.fetch(location)
       pom = MavenGem::PomSpec.parse_pom(pom_doc, maven_base_url)
       spec = MavenGem::PomSpec.generate_spec(pom)
@@ -79,6 +80,20 @@ module MavenGem
 
       pom = OpenStruct.new
       document = REXML::Document.new(pom_doc, maven_base_url)
+
+#      pom.parent = OpenStruct.new
+      pom.parent_group = xpath_parent_group(document)
+      pom.parent_artifact = xpath_parent_artifact(document)
+      pom.parent_version = xpath_parent_version(document)
+
+      if pom.parent_version
+        parent_pom_path = to_maven_path(pom.parent_group, pom.parent_artifact, pom.parent_version)
+        parent_pom_location ="#{maven_base_url}/#{parent_pom_path}"
+        parent_pom_doc = MavenGem::PomFetcher.fetch(parent_pom_location)
+        pom.parent = parse_pom(parent_pom_doc, maven_base_url)
+
+        @@properties['parent.version'] = pom.parent_version
+      end
 
       pom.group = xpath_group(document)
       pom.artifact = xpath_text(document, '/project/artifactId')
