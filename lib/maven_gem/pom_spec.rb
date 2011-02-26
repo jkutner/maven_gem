@@ -114,7 +114,7 @@ module MavenGem
       pom.lib_name = "#{pom.artifact}.rb"
       pom.gem_name = "#{pom.name}-#{pom.version}"
       pom.jar_file = "#{pom.artifact}-#{pom.maven_version}.jar"
-      pom.remote_dir = to_maven_path(pom.group, pom.artifact, pom.version)
+      pom.remote_dir = to_maven_path(pom.group, pom.artifact, pom.maven_version)
       pom.remote_jar_url = "#{maven_base_url}/#{pom.remote_dir}/#{pom.jar_file}"
       pom.gem_file = "#{pom.gem_name}-java.gem"
       pom
